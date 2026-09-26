@@ -1,61 +1,63 @@
 # Codex MiniToo
 
-**Живой статус Codex и лимиты аккаунта на экране Divoom MiniToo.**
+**English** · [Русский](README.ru.md)
+
+**Live Codex status and account usage limits on your Divoom MiniToo.**
 
 ![Codex MiniToo](docs/assets/banner.svg)
 
-[Быстрый старт](#быстрый-старт) · [Экраны](#четыре-состояния-один-экран) · [Как работает](#как-это-работает) · [Команды](#команды) · [Диагностика](#диагностика)
+[Quick start](#quick-start) · [Screens](#four-states-one-screen) · [How it works](#how-it-works) · [Commands](#commands) · [Troubleshooting](#troubleshooting)
 
-Пока Codex пишет код, MiniToo показывает **WORKING**. Когда ответ готов — **DONE**. На том же экране видны остаток пятичасового и недельного лимитов и время их сброса. Можно следить за работой агента, не открывая окно приложения.
+While Codex writes code, MiniToo shows **WORKING**. When the response is ready, it shows **DONE**. The same screen displays your remaining five-hour and weekly limits and their reset times, so you can follow your agent without opening the app.
 
-Интеграция работает локально на macOS, подключается по Bluetooth и использует текущую авторизацию Codex. Отдельные API-ключ и аккаунт Divoom не нужны.
+The integration runs locally on macOS, connects over Bluetooth, and uses your existing Codex authentication. No separate API key or Divoom account is required.
 
-## Четыре состояния, один экран
+## Four states, one screen
 
-Изображения ниже созданы **тем же рендерером, который рисует экран устройства**. Проценты и время здесь демонстрационные. Иллюстрация в шапке — стилизованный макет, а не фотография MiniToo.
+The images below come from **the same renderer used for the device display**. Percentages and reset times are examples. The banner uses a product photo with a simulated Codex monitoring screen.
 
-| Работа | Нужен пользователь |
+| Working | Needs your attention |
 |:---:|:---:|
-| ![Экран WORKING](docs/assets/working.jpg) | ![Экран NEEDS YOU](docs/assets/waiting.jpg) |
-| Codex выполняет задачу | Запрос разрешения, если событие доступно в журнале |
+| ![WORKING screen](docs/assets/working.jpg) | ![NEEDS YOU screen](docs/assets/waiting.jpg) |
+| Codex is running a task | Approval requested, when the event is available in the log |
 
-| Завершено | Простой |
+| Done | Idle |
 |:---:|:---:|
-| ![Экран DONE](docs/assets/done.jpg) | ![Экран IDLE](docs/assets/idle.jpg) |
-| Ответ готов; экран держится 60 секунд | Нет активной работы |
+| ![DONE screen](docs/assets/done.jpg) | ![IDLE screen](docs/assets/idle.jpg) |
+| Response ready; shown for 60 seconds | No active work |
 
-- Статус и оба лимита отображаются **одновременно**.
-- Цвет и пиксельный значок помогают различать состояния с первого взгляда.
-- Голубая полоса — остаток короткого окна, фиолетовая — недельного. При остатке **10% или меньше** полоса становится красной.
-- Время `RESET` показывается в часовом поясе Mac.
-- Интерфейс рассчитан на **160 × 128**: статус и проценты 18 px, подписи сброса 8 px, полосы 5 px. JPEG передаётся с максимальным качеством.
+- Status and both usage limits stay visible **at the same time**.
+- Colors and pixel icons make each state easy to recognize.
+- The cyan bar shows the short-window balance; the purple bar shows the weekly balance. A bar turns red at **10% remaining or less**.
+- `RESET` times use your Mac's local time zone.
+- Designed for **160 × 128**: 18 px status and percentages, 8 px reset labels, and 5 px bars. JPEGs are sent at maximum quality.
 
-## Быстрый старт
+## Quick start
 
-### Что понадобится
+### Requirements
 
-| Компонент | Требование |
+| Component | Requirement |
 |---|---|
-| Устройство | Divoom MiniToo, включённый и сопряжённый с Mac |
-| Компьютер | macOS; Linux и Windows пока не поддерживаются |
-| Python | 3.9 или новее, без сторонних Python-пакетов |
-| Сборка | Xcode Command Line Tools: `swiftc` и `codesign` |
-| Codex | Локальная установка с журналами в `~/.codex` и авторизацией ChatGPT |
-| Интернет | Для чтения лимитов; Bluetooth используется для экрана |
+| Device | Divoom MiniToo, powered on and paired with your Mac |
+| Computer | macOS; Linux and Windows are not supported yet |
+| Python | 3.9 or newer; no third-party Python packages |
+| Build tools | Xcode Command Line Tools: `swiftc` and `codesign` |
+| Codex | A local installation with logs in `~/.codex` and ChatGPT authentication |
+| Internet | Needed to read usage limits; the display uses Bluetooth |
 
-Если инструменты сборки ещё не установлены:
+If you do not have the build tools installed:
 
 ```sh
 xcode-select --install
 ```
 
-### 1. Сопрягите MiniToo
+### 1. Pair MiniToo
 
-Откройте **Настройки системы → Bluetooth**, включите MiniToo и подключите его. Отключите приложение Divoom на телефоне от устройства, чтобы оно не занимало соединение.
+Open **System Settings → Bluetooth**, turn on MiniToo, and pair it with your Mac. Disconnect the Divoom phone app from the device so it does not occupy the connection.
 
-### 2. Соберите и проверьте экран
+### 2. Build and test the display
 
-Откройте терминал в папке клонированного проекта:
+Open a terminal in the cloned project directory:
 
 ```sh
 bash build.sh
@@ -64,82 +66,82 @@ python3 minitoo.py start
 python3 minitoo.py state done
 ```
 
-При первом запуске разрешите доступ к Bluetooth в macOS. На MiniToo должен появиться **DONE** вместе с лимитами.
+Allow Bluetooth access in macOS when prompted. MiniToo should display **DONE** alongside your usage limits.
 
-Если адрес не определился автоматически, укажите Bluetooth MAC **своего MiniToo**:
+If automatic discovery fails, provide **your MiniToo's** Bluetooth MAC address:
 
 ```sh
 python3 minitoo.py setup --mac AA:BB:CC:DD:EE:FF
 ```
 
-### 3. Включите автоматическое переключение
+### 3. Enable automatic status updates
 
 ```sh
 python3 install_service.py
 ```
 
-Готово. Фоновый сервис отслеживает реальные события Codex и запускается при входе в macOS. Перезапуск Codex не нужен: он может обнаружить уже выполняющуюся задачу.
+The background service now follows real Codex events and starts when you log in to macOS. No Codex restart is needed; it can detect a task that is already running.
 
-> Установщик сохраняет абсолютный путь к проекту. Если переместите папку, повторите `python3 install_service.py`. Если ранее использовали hooks этой интеграции, установщик удалит только их обработчики, сохранив резервную копию и остальные hooks.
+> The installer saves the absolute project path. If you move the directory, run `python3 install_service.py` again. If you previously used this integration's hooks, the installer removes only its own handlers, keeping a backup and preserving other hooks.
 
-## Как это работает
+## How it works
 
 ```mermaid
 flowchart LR
-    C[Codex выполняет задачу] --> J[Локальные события Codex]
-    J --> W[Наблюдатель Python]
-    A[Codex App Server] -->|Остаток и время сброса| L[Лимиты аккаунта]
-    L --> R[Рендерер Swift: 160 × 128]
-    W -->|Текущий статус| R
+    C[Codex runs a task] --> J[Local Codex events]
+    J --> W[Python observer]
+    A[Codex App Server] -->|Remaining quota and reset times| L[Account limits]
+    L --> R[Swift renderer: 160 × 128]
+    W -->|Current status| R
     R --> B[Bluetooth Classic / RFCOMM]
-    B --> D[Экран MiniToo]
+    B --> D[MiniToo display]
 ```
 
-Наблюдатель читает индекс задач `~/.codex/state_*.sqlite` в режиме **только чтения** и следит за добавлением событий в локальные JSONL-журналы. Изменения известных задач проверяются каждую секунду, список задач — каждые пять секунд.
+The observer reads the task index in `~/.codex/state_*.sqlite` in **read-only mode** and watches for events appended to local JSONL logs. It checks known tasks every second and refreshes the task list every five seconds.
 
-Лимиты читаются через официальный метод [`account/rateLimits/read`](https://learn.chatgpt.com/docs/app-server) в `codex app-server`. Рендерер объединяет статус и лимиты в изображение. Bluetooth helper передаёт его по протоколу `0x8B`, ожидая подтверждения начала загрузки и отправляя блоки по 256 байт.
+Usage limits come from the official [`account/rateLimits/read`](https://learn.chatgpt.com/docs/app-server) method in `codex app-server`. The renderer combines status and limits into an image. The Bluetooth helper sends it using the `0x8B` protocol, waiting for the upload announcement acknowledgement before transferring 256-byte chunks.
 
 ```mermaid
 stateDiagram-v2
     [*] --> IDLE
-    IDLE --> WORKING: начало задачи
-    WORKING --> DONE: ответ завершён
-    DONE --> IDLE: прошло 60 секунд
-    DONE --> WORKING: новая задача
-    WORKING --> IDLE: задача прервана
-    WORKING --> NEEDS_YOU: запрос разрешения доступен в журнале
-    NEEDS_YOU --> WORKING: разрешение обработано
+    IDLE --> WORKING: task starts
+    WORKING --> DONE: response completes
+    DONE --> IDLE: after 60 seconds
+    DONE --> WORKING: new task
+    WORKING --> IDLE: task interrupted
+    WORKING --> NEEDS_YOU: approval request available in log
+    NEEDS_YOU --> WORKING: approval resolved
 ```
 
-Если работает несколько задач, используется приоритет: **NEEDS YOU → WORKING → DONE → IDLE**. Завершение одной задачи не скрывает работу другой. Неактивные состояния старше часа не учитываются.
+With multiple tasks, the priority is **NEEDS YOU → WORKING → DONE → IDLE**. One task finishing does not hide another task that is still running. States with no activity for over an hour are ignored.
 
-### Что означают лимиты
+### Understanding the limits
 
-Проценты показывают **доступный остаток**, а не использованную долю. Например, `5H 82%` означает, что в коротком окне осталось 82% лимита. Это лимиты всего аккаунта, не отдельного проекта или задачи.
+Percentages represent **remaining capacity**, not consumed usage. For example, `5H 82%` means 82% of the short-window quota remains. These limits apply to the whole account, not an individual project or task.
 
-Сервис обновляет изображение при смене статуса и примерно раз в минуту для обновления лимитов. Если запрос не удался, используется последний снимок; спустя пять минут он помечается **OLD DATA**. Неизвестные значения отображаются как `--%`.
+The service updates the image when the status changes and approximately once a minute to refresh limits. If a request fails, it keeps the last snapshot; after five minutes, it is marked **OLD DATA**. Unknown values appear as `--%`.
 
-### Почему иногда появляются песочные часы
+### Why the hourglass sometimes appears
 
-**LOADING** — экран самого MiniToo во время приёма и обработки нового изображения. Передача обычно занимает несколько секунд. При динамических лимитах изображение приходится загружать повторно, поэтому песочные часы могут появляться при смене статуса и обновлении данных.
+**LOADING** is MiniToo's own screen while it receives and processes a new image. Transfers usually take a few seconds. Dynamic usage limits require image uploads, so the hourglass may appear during status changes and data refreshes.
 
-## Команды
+## Commands
 
-Выполняйте команды из папки проекта.
+Run these commands from the project directory.
 
-| Действие | Команда |
+| Action | Command |
 |---|---|
-| Найти и сохранить адрес MiniToo | `python3 minitoo.py setup` |
-| Запустить Bluetooth helper | `python3 minitoo.py start` |
-| Включить наблюдатель и автозапуск | `python3 install_service.py` |
-| Принудительно обновить лимиты и экран | `python3 minitoo.py limits` |
-| Показать работу | `python3 minitoo.py state working` |
-| Показать ожидание разрешения | `python3 minitoo.py state waiting` |
-| Показать завершение | `python3 minitoo.py state done` |
-| Показать простой | `python3 minitoo.py state idle` |
-| Остановить Bluetooth helper | `python3 minitoo.py stop` |
+| Discover and save the MiniToo address | `python3 minitoo.py setup` |
+| Start the Bluetooth helper | `python3 minitoo.py start` |
+| Enable the observer and login startup | `python3 install_service.py` |
+| Force a limits refresh and update the screen | `python3 minitoo.py limits` |
+| Show working | `python3 minitoo.py state working` |
+| Show waiting for approval | `python3 minitoo.py state waiting` |
+| Show done | `python3 minitoo.py state done` |
+| Show idle | `python3 minitoo.py state idle` |
+| Stop the Bluetooth helper | `python3 minitoo.py stop` |
 
-Наблюдатель может заменить вручную выбранный экран реальным статусом при следующем обновлении. Для ручного тестирования временно остановите сервис:
+The observer may replace a manually selected screen with the real status on its next update. To test screens manually, temporarily stop the service:
 
 ```sh
 launchctl bootout "gui/$(id -u)" \
@@ -150,39 +152,39 @@ python3 minitoo.py state waiting
 python3 minitoo.py state done
 python3 minitoo.py state idle
 
-# Вернуть автоматическое отслеживание
+# Restore automatic tracking
 python3 install_service.py
 ```
 
-## Диагностика
+## Troubleshooting
 
-| Симптом | Что проверить |
+| Symptom | What to check |
 |---|---|
-| MiniToo не найден | Сопряжение с Mac; при необходимости укажите адрес через `setup --mac` |
-| Bluetooth не подключается | Питание MiniToo, разрешение Bluetooth в macOS, соединение с приложением на телефоне |
-| Экран не меняется автоматически | `runtime/watcher.log` и `runtime/watcher-state.json`; повторите установку сервиса |
-| Лимиты показывают `--%` или OLD DATA | Авторизацию ChatGPT в локальном Codex и доступ к интернету; выполните `python3 minitoo.py limits` |
-| Отображается только значок Telegram | Удалите `"display_mode": "notification"` из `config.json`, чтобы вернуться к изображениям |
-| После аварии helper не запускается | Проверьте, что старый процесс завершён, удалите оставшийся `runtime/commands.fifo`, затем выполните `start` |
+| MiniToo is not found | Pair it with your Mac; specify the address with `setup --mac` if needed |
+| Bluetooth does not connect | Device power, macOS Bluetooth permission, and the phone app's connection |
+| Status does not update automatically | Check `runtime/watcher.log` and `runtime/watcher-state.json`; reinstall the service |
+| Limits show `--%` or OLD DATA | Check ChatGPT authentication in local Codex and internet access; run `python3 minitoo.py limits` |
+| Only a Telegram icon appears | Remove `"display_mode": "notification"` from `config.json` to return to image mode |
+| Helper will not restart after a crash | Confirm the old process has stopped, remove the leftover `runtime/commands.fifo`, then run `start` |
 
-Посмотреть работу наблюдателя:
+Follow the observer log:
 
 ```sh
 tail -f runtime/watcher.log
 ```
 
-Другие диагностические файлы:
+Other diagnostic files:
 
 ```text
 runtime/
-├── bluetooth.log       # соединение, отправка и ответы MiniToo
-├── launcher.log        # вывод Bluetooth helper
-├── watcher.log         # переключения реальных состояний и ошибки
-├── watcher-state.json  # последнее показанное состояние
-└── limits.json         # снимок лимитов, без токенов авторизации
+├── bluetooth.log       # Connection, transfers, and MiniToo responses
+├── launcher.log        # Output from older direct helper launches
+├── watcher.log         # Real status transitions and errors
+├── watcher-state.json  # Last displayed state
+└── limits.json         # Limits snapshot, without authentication tokens
 ```
 
-### Отключение и удаление автозапуска
+### Disable the service and remove login startup
 
 ```sh
 launchctl bootout "gui/$(id -u)" \
@@ -191,20 +193,20 @@ rm "$HOME/Library/LaunchAgents/local.codex.minitoo.watcher.plist"
 python3 minitoo.py stop
 ```
 
-## Ограничения
+## Limitations
 
-- **NEEDS YOU зависит от версии Codex.** Начало и завершение проверены на реальных журналах. Ожидание разрешения отображается только если приложение сохраняет соответствующее событие. Произвольный вопрос ассистента не определяется как ожидание.
-- Формат локального индекса и журналов Codex может измениться после обновления приложения.
-- Протокол MiniToo неофициальный. На других моделях Divoom совместимость не проверялась.
-- Передача изображений занимает время; это не мгновенное переключение заранее загруженных циферблатов.
-- Фоновый наблюдатель просматривает до 100 последних неархивированных задач.
+- **NEEDS YOU depends on your Codex version.** Start and completion have been verified against real logs. Waiting for approval is detected only if the app records a corresponding event. An ordinary question from the assistant is not detected as waiting.
+- Codex's local index and log formats may change after an app update.
+- MiniToo's protocol is unofficial. Compatibility with other Divoom models has not been tested.
+- Image transfers take time; they are not instant switches between preloaded clock faces.
+- The observer examines up to 100 recent, non-archived tasks.
 
-## Дополнительные режимы
+## Additional modes
 
 <details>
-<summary><strong>Переключение заранее загруженных экранов</strong></summary>
+<summary><strong>Switch between preloaded screens</strong></summary>
 
-Если пользовательские экраны уже загружены в MiniToo, можно задать реальные ID устройства и циферблатов:
+If you have already uploaded custom screens to MiniToo, specify the actual device and clock IDs:
 
 ```json
 {
@@ -219,55 +221,57 @@ python3 minitoo.py stop
 }
 ```
 
-Эти числа — **пример**, не готовые ID. Для указанных состояний отправляется `Channel/SetClockSelectId` вместо изображения. На заранее загруженном экране динамические лимиты не рисуются. Интеграция не выполняет загрузку циферблатов или вход в аккаунт Divoom.
+These numbers are **examples**, not ready-to-use IDs. For these states, the integration sends `Channel/SetClockSelectId` instead of an image. Dynamic usage limits are not drawn on preloaded screens. The integration does not upload clock faces or log in to a Divoom account.
 
 </details>
 
 <details>
-<summary><strong>Короткие уведомления и hooks</strong></summary>
+<summary><strong>Short notifications and hooks</strong></summary>
 
-Для коротких уведомлений добавьте `"display_mode": "notification"` в `config.json`. Некоторые прошивки показывают только встроенный значок приложения, игнорируя текст, поэтому основной режим использует собственные изображения.
+For short notifications, add `"display_mode": "notification"` to `config.json`. Some firmware versions show only a built-in app icon and ignore the text, so the main mode uses custom images.
 
-Для отдельного сценария с hooks доступны `python3 minitoo.py hooks` и `python3 minitoo.py install-hooks`. Codex требует просмотра и доверия новым hooks через `/hooks`. Не включайте hooks одновременно с фоновым наблюдателем: оба способа будут управлять одним экраном.
+For a separate hook-based workflow, `python3 minitoo.py hooks` and `python3 minitoo.py install-hooks` are available. Codex requires you to review and trust new hooks through `/hooks`. Do not enable hooks alongside the observer: both would control the same display.
 
 </details>
 
-## Для разработчиков
+## Development
 
 ```text
 codex-minitoo/
-├── minitoo.py                 # CLI, рендеринг, загрузка экрана и совместимость с hooks
-├── watch_codex.py             # наблюдение за реальной работой Codex
-├── usage_limits.py            # клиент чтения лимитов через Codex App Server
-├── install_service.py         # установка пользовательского LaunchAgent
-├── build.sh                   # сборка Swift-компонентов
+├── minitoo.py                 # CLI, rendering, uploads, and hook compatibility
+├── watch_codex.py             # Observe real Codex activity
+├── usage_limits.py            # Read limits through Codex App Server
+├── install_service.py         # Install a per-user LaunchAgent
+├── build.sh                   # Build Swift components
 ├── transport/
 │   ├── divoom-send.swift       # Bluetooth Classic / RFCOMM helper
-│   └── render-status.swift     # интерфейс экрана
-├── tests/                     # тесты протокола и согласования состояний
-└── docs/assets/               # иллюстрация и примеры для README
+│   └── render-status.swift     # Display interface
+├── tests/                     # Protocol and state coordination tests
+├── README.md                  # English documentation
+├── README.ru.md               # Russian documentation
+└── docs/assets/               # Banner and screen examples
 ```
 
-Запуск тестов:
+Run tests:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-Изменение интерфейса:
+Change the interface:
 
 ```sh
-# Отредактируйте transport/render-status.swift, затем пересоберите
+# Edit transport/render-status.swift, then rebuild
 bash build.sh
 python3 minitoo.py limits
 ```
 
-`config.json`, `runtime/`, `vendor/`, логи и Python-кэши исключены из Git. Тексты задач и токены авторизации не сохраняются интеграцией и не передаются на MiniToo. Для лимитов используется авторизация, которой управляет сам Codex.
+`config.json`, `runtime/`, `vendor/`, logs, and Python caches are excluded from Git. The integration does not save task text or authentication tokens, or send them to MiniToo. Codex manages the authentication used to read limits.
 
-## Благодарности
+## Credits
 
-Bluetooth transport основан на [bugzmanov/divoom-minitoo](https://github.com/bugzmanov/divoom-minitoo), commit `f8e48705c2c8f791545821a4740aeddc2eb7a9fa`. В исходник добавлены настраиваемый путь лога и права FIFO `0600`. Проект использует исходный Swift-код; сторонние готовые бинарники не нужны для сборки.
+The Bluetooth transport is based on [bugzmanov/divoom-minitoo](https://github.com/bugzmanov/divoom-minitoo), commit `f8e48705c2c8f791545821a4740aeddc2eb7a9fa`. Changes add a configurable log path and FIFO permissions of `0600`. The project builds from Swift source; third-party prebuilt binaries are not required.
 
-Документация: [Codex App Server](https://learn.chatgpt.com/docs/app-server) · [Codex hooks](https://learn.chatgpt.com/docs/hooks).
+Documentation: [Codex App Server](https://learn.chatgpt.com/docs/app-server) · [Codex hooks](https://learn.chatgpt.com/docs/hooks).
 
-Проект не связан с OpenAI или Divoom и не является их официальной интеграцией.
+This project is not affiliated with OpenAI or Divoom and is not an official integration.

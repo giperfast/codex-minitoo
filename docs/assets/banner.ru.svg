@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="350" viewBox="0 0 960 350" role="img" aria-labelledby="title desc">
-  <title id="title">Codex MiniToo — your agent, on your desk</title>
-  <desc id="desc">Codex integration for the MiniToo desktop display: live status and two usage limits on one screen.</desc>
+  <title id="title">Codex MiniToo — код работает, экран рассказывает</title>
+  <desc id="desc">Интеграция Codex с настольным дисплеем MiniToo: статус работы и два лимита на одном экране.</desc>
   <defs>
     <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101c32"/><stop offset="1" stop-color="#080d18"/></linearGradient>
     <linearGradient id="case" x2="0" y2="1"><stop stop-color="#ebedf2"/><stop offset="1" stop-color="#a3adbd"/></linearGradient>
@@ -11,12 +11,12 @@
   <g font-family="Arial, Helvetica, sans-serif">
     <text x="48" y="70" fill="#67d3ff" font-size="13" font-weight="bold" letter-spacing="3">YOUR AGENT. ON YOUR DESK.</text>
     <text x="46" y="130" fill="#f2f6ff" font-size="51" font-weight="bold">Codex MiniToo</text>
-    <text x="48" y="177" fill="#c0cde0" font-size="23">Live status and usage limits.</text>
-    <text x="48" y="208" fill="#c0cde0" font-size="23">One tiny screen.</text>
+    <text x="48" y="177" fill="#c0cde0" font-size="23">Статус работы и лимиты —</text>
+    <text x="48" y="208" fill="#c0cde0" font-size="23">на одном маленьком экране.</text>
     <g font-size="13" font-weight="bold" text-anchor="middle" dominant-baseline="central">
       <rect x="48" y="255" width="91" height="31" rx="15" fill="#182b42"/><text x="93.5" y="270.5" fill="#a5dfff">macOS</text>
       <rect x="150" y="255" width="144" height="31" rx="15" fill="#182b42"/><text x="222" y="270.5" fill="#a5dfff">Bluetooth Classic</text>
-      <rect x="305" y="255" width="130" height="31" rx="15" fill="#182b42"/><text x="370" y="270.5" fill="#a5dfff">No API key</text>
+      <rect x="305" y="255" width="130" height="31" rx="15" fill="#182b42"/><text x="370" y="270.5" fill="#a5dfff">Без API-ключа</text>
     </g>
   </g>
   <!-- Product photo mockup with the Codex monitoring screen. -->
