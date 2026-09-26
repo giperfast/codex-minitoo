@@ -434,6 +434,10 @@ final class Delegate: NSObject, IOBluetoothRFCOMMChannelDelegate {
     }
     @objc func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
         log("delegate: channel closed")
+        if isDaemon {
+            unlink(ProcessInfo.processInfo.environment["DIVOOM_FIFO"] ?? "/tmp/divoom.fifo")
+            exit(3)
+        }
     }
     @objc func rfcommChannelWriteComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!, refcon: UnsafeMutableRawPointer!, status error: IOReturn) {
         log("delegate: writeComplete status=0x\(String(error, radix: 16))")
@@ -640,6 +644,11 @@ func sendFrames(_ frames: [[UInt8]], on channel: IOBluetoothRFCOMMChannel, delay
         }
         if result != kIOReturnSuccess {
             log("  write failed: 0x\(String(result, radix: 16))")
+            if isDaemon {
+                unlink(ProcessInfo.processInfo.environment["DIVOOM_FIFO"] ?? "/tmp/divoom.fifo")
+                exit(3)
+            }
+            return
         }
         if delayMs > 0 {
             Thread.sleep(forTimeInterval: Double(delayMs) / 1000.0)
@@ -679,7 +688,11 @@ func runDaemonLoop(on channel: IOBluetoothRFCOMMChannel) {
                     try? fh.close()
                     unlink(fifoPath)
                     // Close BT from main thread via a small delay so logs flush.
-                    DispatchQueue.main.async { exit(0) }
+                    DispatchQueue.main.async {
+                        channel.close()
+                        device.closeConnection()
+                        exit(0)
+                    }
                     return
                 }
                 // Throttle: ensure we wait at least gapMs between commands so the

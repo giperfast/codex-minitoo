@@ -78,6 +78,19 @@ class IntegrationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 minitoo.fifo_write('quit', timeout=.1)
 
+    def test_upload_timeout_reopens_transport_once(self):
+        with patch.object(minitoo, 'upload_screen', side_effect=[TimeoutError('no reply'), None]) as upload, patch.object(minitoo, 'restart_transport') as restart:
+            minitoo.send_screen('working')
+            restart.assert_called_once_with()
+            self.assertEqual(upload.call_count, 2)
+
+    def test_repeated_timeout_is_reported(self):
+        with patch.object(minitoo, 'upload_screen', side_effect=TimeoutError('no reply')) as upload, patch.object(minitoo, 'restart_transport') as restart:
+            with self.assertRaises(TimeoutError):
+                minitoo.send_screen('working')
+            restart.assert_called_once_with()
+            self.assertEqual(upload.call_count, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -61,8 +61,11 @@ def start():
         raise RuntimeError('Сначала выполните bash build.sh')
     if (RUN / 'commands.fifo').exists():
         # Do not create a second daemon which would unlink the first FIFO.
-        fifo_write('raw bd 27')
-        return
+        try:
+            fifo_write('raw bd 27')
+            return
+        except RuntimeError:
+            (RUN / 'commands.fifo').unlink(missing_ok=True)
     env = os.environ.copy()
     env.update(DIVOOM_FIFO=str(RUN / 'commands.fifo'), DIVOOM_LOG=str(RUN / 'bluetooth.log'))
     if cfg.get('rfcomm_port') is not None:
@@ -126,7 +129,27 @@ def refresh_limits(force=False):
 def image_blob(jpeg):
     return bytes([0x23, 1, 0x03, 0xe8, 8, 10, 1]) + struct.pack('>I', len(jpeg)) + jpeg
 
+def restart_transport():
+    fifo_write('quit')
+    deadline = time.monotonic() + 5
+    while (RUN / 'commands.fifo').exists():
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Bluetooth helper не завершился при переподключении')
+        time.sleep(.05)
+    start()
+
+
 def send_screen(state):
+    try:
+        upload_screen(state)
+    except TimeoutError:
+        # A FIFO writer can remain alive while its RFCOMM channel stops
+        # receiving replies after Bluetooth reconnects. Reopen it once.
+        restart_transport()
+        upload_screen(state)
+
+
+def upload_screen(state):
     image = RUN / 'screens' / (state + '.jpg')
     if not image.exists():
         raise RuntimeError('Нет изображения состояния: выполните bash build.sh')
@@ -164,7 +187,7 @@ def send_screen(state):
                     time.sleep(len(lines) * .04 + 1)
                     return
         time.sleep(.05)
-    raise RuntimeError('MiniToo не подтвердил начало загрузки изображения (0x8B)')
+    raise TimeoutError('MiniToo не подтвердил начало загрузки изображения (0x8B)')
 
 def update(event, now=None):
     state = EVENTS.get(event.get('hook_event_name'))
@@ -262,11 +285,17 @@ def main():
         if args.cmd == 'setup': setup(args.mac)
         elif args.cmd == 'start': start()
         elif args.cmd == 'stop': fifo_write('quit')
-        elif args.cmd == 'state': display(args.state)
-        elif args.cmd == 'limits':
-            print(json.dumps(refresh_limits(force=True), indent=2))
-            saved = json.loads((RUN / 'state.json').read_text()) if (RUN / 'state.json').exists() else {}
-            display(saved.get('sent') or 'idle')
+        elif args.cmd in ('state', 'limits'):
+            # Manual uploads share the observer's lock for the entire transfer.
+            # Otherwise another announce can interrupt the pending image chunks.
+            with open(RUN / 'state.lock', 'a') as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                if args.cmd == 'state':
+                    display(args.state)
+                else:
+                    print(json.dumps(refresh_limits(force=True), indent=2))
+                    saved = json.loads((RUN / 'state.json').read_text()) if (RUN / 'state.json').exists() else {}
+                    display(saved.get('sent') or 'idle')
         elif args.cmd == 'hooks': print(json.dumps(hooks_document(), indent=2))
         elif args.cmd == 'install-hooks': install_hooks(args.target)
         elif args.cmd == 'hook': update(json.load(sys.stdin))
