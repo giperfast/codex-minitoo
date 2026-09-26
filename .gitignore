@@ -1,0 +1,30 @@
+# Local device settings (Bluetooth address and device IDs)
+/config.json
+.env
+.env.*
+!.env.example
+
+# Generated binaries, screens, caches and Bluetooth runtime state
+/runtime/
+*.app/
+*.log
+*.fifo
+
+# Reference checkout, including upstream prebuilt binaries
+/vendor/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local backups and macOS metadata
+*.backup-*
+*.swp
+*.swo
+.DS_Store
+._*

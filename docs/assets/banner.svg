@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="350" viewBox="0 0 960 350" role="img" aria-labelledby="title desc">
+  <title id="title">Codex MiniToo — код работает, экран рассказывает</title>
+  <desc id="desc">Интеграция Codex с настольным дисплеем MiniToo: статус работы и два лимита на одном экране.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101c32"/><stop offset="1" stop-color="#080d18"/></linearGradient>
+    <linearGradient id="case" x2="0" y2="1"><stop stop-color="#ebedf2"/><stop offset="1" stop-color="#a3adbd"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#39bfff" stop-opacity=".18"/><stop offset="1" stop-color="#39bfff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="960" height="350" rx="22" fill="url(#bg)"/>
+  <circle cx="747" cy="150" r="230" fill="url(#glow)"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="48" y="70" fill="#67d3ff" font-size="13" font-weight="bold" letter-spacing="3">YOUR AGENT. ON YOUR DESK.</text>
+    <text x="46" y="130" fill="#f2f6ff" font-size="51" font-weight="bold">Codex MiniToo</text>
+    <text x="48" y="177" fill="#c0cde0" font-size="23">Статус работы и лимиты —</text>
+    <text x="48" y="208" fill="#c0cde0" font-size="23">на одном маленьком экране.</text>
+    <g font-size="13" font-weight="bold">
+      <rect x="48" y="255" width="91" height="31" rx="15" fill="#182b42"/><text x="65" y="275" fill="#a5dfff">macOS</text>
+      <rect x="150" y="255" width="144" height="31" rx="15" fill="#182b42"/><text x="167" y="275" fill="#a5dfff">Bluetooth Classic</text>
+      <rect x="305" y="255" width="130" height="31" rx="15" fill="#182b42"/><text x="322" y="275" fill="#a5dfff">Без API-ключа</text>
+    </g>
+  </g>
+  <!-- Stylized device illustration; the screenshots below use the real renderer. -->
+  <ellipse cx="746" cy="305" rx="135" ry="17" fill="#000" opacity=".28"/>
+  <rect x="635" y="46" width="221" height="213" rx="22" fill="url(#case)"/>
+  <rect x="653" y="64" width="185" height="165" rx="12" fill="#3f4856"/>
+  <rect x="663" y="74" width="165" height="144" rx="6" fill="#070c14"/>
+  <g font-family="monospace" font-weight="bold">
+    <text x="674" y="91" fill="#fff" font-size="11">CODEX</text>
+    <rect x="670" y="97" width="151" height="27" rx="4" fill="#142333"/>
+    <text x="680" y="116" fill="#42c1ff" font-size="17">&gt; WORKING</text>
+    <text x="675" y="145" fill="#b8cadb" font-size="11">5H</text><text x="811" y="145" text-anchor="end" fill="#fff" font-size="18">82%</text>
+    <rect x="675" y="151" width="136" height="5" rx="2" fill="#243446"/><rect x="675" y="151" width="112" height="5" rx="2" fill="#42c1ff"/>
+    <text x="675" y="166" fill="#b8cadb" font-size="8">RESET 21:38</text>
+    <text x="675" y="184" fill="#b8cadb" font-size="11">WEEK</text><text x="811" y="184" text-anchor="end" fill="#fff" font-size="18">97%</text>
+    <rect x="675" y="191" width="136" height="5" rx="2" fill="#243446"/><rect x="675" y="191" width="132" height="5" rx="2" fill="#ac87ff"/>
+    <text x="675" y="208" fill="#b8cadb" font-size="8">RESET 03.10 17:35</text>
+  </g>
+  <circle cx="745" cy="245" r="4" fill="#718198"/>
+  <path d="M629 264H862L884 291Q887 300 874 300H618Q605 300 608 291Z" fill="#bbc5d4"/>
+  <g fill="#8795aa"><rect x="636" y="278" width="32" height="12" rx="3"/><rect x="676" y="278" width="32" height="12" rx="3"/><rect x="716" y="278" width="32" height="12" rx="3"/><rect x="756" y="278" width="32" height="12" rx="3"/></g>
+  <circle cx="837" cy="282" r="10" fill="#53c5c4"/>
+</svg>
