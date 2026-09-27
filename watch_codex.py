@@ -31,10 +31,9 @@ class RetryBackoff:
 class Tracker:
     def __init__(self):
         self.sessions = {}
+        self.questions = {}
 
     def consume(self, thread, record):
-        if record.get('type') != 'event_msg':
-            return
         payload = record.get('payload') or {}
         kind = payload.get('type')
         try:
@@ -43,12 +42,37 @@ class Tracker:
             return
         turn = payload.get('turn_id')
         previous = self.sessions.get(thread, {})
+        if record.get('type') == 'response_item':
+            pending = self.questions.setdefault(thread, {})
+            call = payload.get('call_id')
+            name = payload.get('name', '').split('.')[-1]
+            if kind == 'function_call' and name in ('request_user_input', 'request_user_input_async') and call:
+                pending[call] = name
+                self.sessions[thread] = {'state': 'waiting', 'turn': previous.get('turn'), 'time': stamp}
+            elif kind in ('function_call_output', 'verified_answer') and call in pending:
+                if pending[call] == 'request_user_input' or kind == 'verified_answer':
+                    pending.pop(call)
+                    previous.update(state='waiting' if pending else 'working', time=stamp)
+            elif kind == 'message' and payload.get('role') == 'user' and pending:
+                # Async replies are user messages; ordinary follow-ups also
+                # supersede the previous question. Never retain question text.
+                pending.clear()
+                previous.update(state='working', time=stamp)
+            return
+        if record.get('type') != 'event_msg':
+            return
         if kind == 'task_started':
+            self.questions.pop(thread, None)
             self.sessions[thread] = {'state': 'working', 'turn': turn, 'time': stamp}
         elif kind in ('task_complete', 'task_completed', 'turn_aborted', 'task_aborted'):
             if previous.get('turn') and turn and previous['turn'] != turn:
                 return
-            self.sessions[thread] = {'state': 'done' if kind.startswith('task_complet') else 'idle',
+            completed = kind.startswith('task_complet')
+            pending = self.questions.get(thread, {})
+            if not completed:
+                self.questions.pop(thread, None)
+            state = 'waiting' if completed and pending else 'done' if completed else 'idle'
+            self.sessions[thread] = {'state': state,
                                      'turn': turn, 'time': stamp}
         elif kind in ('permission_request', 'approval_requested'):
             self.sessions[thread] = {'state': 'waiting', 'turn': turn or previous.get('turn'), 'time': stamp}
@@ -113,6 +137,7 @@ def main():
     sent = None
     sent_at = 0
     retry = RetryBackoff()
+    next_upload = 0
     while True:
         try:
             now = time.time()
@@ -126,7 +151,9 @@ def main():
                     for record in records: tracker.consume(thread, record)
                 except FileNotFoundError: continue
             state = tracker.selected(now)
-            if (state != sent or now - sent_at >= 60) and retry.ready(time.monotonic()):
+            # Keep consuming events during the firmware cooldown. Once ready,
+            # send the current aggregate state, not a queue of old transitions.
+            if (state != sent or now - sent_at >= 60) and retry.ready(time.monotonic()) and time.monotonic() >= next_upload:
                 try:
                     with open(minitoo.RUN / 'state.lock', 'a') as lock:
                         fcntl.flock(lock, fcntl.LOCK_EX)
@@ -137,6 +164,7 @@ def main():
                           f'повтор через {delay} с', flush=True)
                     continue
                 retry.succeeded()
+                next_upload = time.monotonic() + minitoo.IMAGE_UPLOAD_GAP
                 sent, sent_at = state, time.time()
                 diagnostic = {'state': state, 'updated_at': sent_at,
                               'source': 'codex_rollout', 'threads': tracker.sessions}

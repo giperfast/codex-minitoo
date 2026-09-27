@@ -9,6 +9,38 @@ from watch_codex import Tracker, read_added, RetryBackoff
 
 
 class WatcherTests(unittest.TestCase):
+    def item(self, kind, now, **payload):
+        return {'type': 'response_item', 'timestamp': datetime.fromtimestamp(now, timezone.utc).isoformat(),
+                'payload': dict(type=kind, **payload)}
+
+    def test_question_waits_until_matching_answer_despite_other_activity(self):
+        tracker = Tracker()
+        tracker.consume('a', self.event('task_started', 100))
+        tracker.consume('a', self.item('function_call', 101, name='request_user_input', call_id='q'))
+        tracker.consume('b', self.event('task_started', 102))
+        tracker.consume('a', self.item('function_call_output', 103, call_id='other'))
+        self.assertEqual(tracker.selected(104), 'waiting')
+        tracker.consume('a', self.item('function_call_output', 105, call_id='q'))
+        self.assertEqual(tracker.selected(106), 'working')
+
+    def test_async_acceptance_and_turn_completion_do_not_answer_question(self):
+        tracker = Tracker()
+        tracker.consume('a', self.event('task_started', 100))
+        tracker.consume('a', self.item('function_call', 101, name='functions.request_user_input_async', call_id='q'))
+        tracker.consume('a', self.item('function_call_output', 102, call_id='q', output='{"accepted":true}'))
+        tracker.consume('a', self.event('task_complete', 103))
+        self.assertEqual(tracker.selected(104), 'waiting')
+        tracker.consume('a', self.item('message', 105, role='user', content=[]))
+        self.assertEqual(tracker.selected(106), 'working')
+
+    def test_abort_clears_pending_question(self):
+        tracker = Tracker()
+        tracker.consume('a', self.event('task_started', 100))
+        tracker.consume('a', self.item('function_call', 101, name='request_user_input', call_id='q'))
+        tracker.consume('a', self.event('turn_aborted', 102))
+        self.assertEqual(tracker.selected(103), 'idle')
+        self.assertNotIn('a', tracker.questions)
+
     def test_retry_waits_caps_delay_and_resets_after_success(self):
         retry = RetryBackoff()
         now = 100

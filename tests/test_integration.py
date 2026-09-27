@@ -9,6 +9,20 @@ from usage_limits import normalize
 
 
 class IntegrationTests(unittest.TestCase):
+    def test_separate_senders_wait_after_previous_upload(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo, 'upload_screen') as upload, patch.object(minitoo.time, 'time', return_value=100), patch.object(minitoo.time, 'sleep') as sleep:
+            minitoo.send_screen('working')
+            sleep.assert_not_called()
+            minitoo.send_screen('done')
+            sleep.assert_called_once_with(minitoo.IMAGE_UPLOAD_GAP)
+            self.assertEqual(upload.call_count, 2)
+
+    def test_failed_upload_also_leaves_firmware_cooldown(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo, 'upload_screen', side_effect=[TimeoutError('partial upload'), None]), patch.object(minitoo.time, 'time', return_value=100), patch.object(minitoo.time, 'sleep') as sleep:
+            with self.assertRaises(TimeoutError): minitoo.send_screen('working')
+            minitoo.send_screen('done')
+            sleep.assert_called_once_with(minitoo.IMAGE_UPLOAD_GAP)
+
     def test_final_design_reply_requires_completed_transfer(self):
         reply = 'delegate: rx[13]: 01 09 00 04 bd 55 13 01 05 00 38 01 02\n'
         start = 'sendFrames: count=95 delay=40ms\n'

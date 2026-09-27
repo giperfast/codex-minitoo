@@ -19,6 +19,7 @@ from usage_limits import read_limits, normalize
 ROOT = Path(__file__).resolve().parent
 RUN = ROOT / 'runtime'
 CONFIG = ROOT / 'config.json'
+IMAGE_UPLOAD_GAP = 5
 EVENTS = {'UserPromptSubmit': 'working', 'PreToolUse': 'working',
           'PermissionRequest': 'waiting', 'Stop': 'done',
           'Interrupt': 'idle', 'SessionEnd': 'end'}
@@ -134,7 +135,18 @@ def send_screen(state):
     # Let the watcher retry with backoff without interrupting this connection.
     # The helper exits and removes its FIFO when the channel actually closes;
     # display() will then start a new helper on the next attempt.
-    upload_screen(state)
+    # The firmware may still be decoding the previous image after its reply.
+    # Callers hold state.lock; persist the gap across manual/service senders.
+    timing = RUN / 'upload-timing.json'
+    previous = json.loads(timing.read_text()) if timing.exists() else {}
+    pause = min(IMAGE_UPLOAD_GAP, max(0, previous.get('finished_at', 0) + IMAGE_UPLOAD_GAP - time.time()))
+    if pause:
+        time.sleep(pause)
+    try:
+        upload_screen(state)
+    finally:
+        RUN.mkdir(parents=True, exist_ok=True)
+        timing.write_text(json.dumps({'finished_at': time.time()}))
 
 
 def received_packets(text):
