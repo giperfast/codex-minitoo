@@ -19,7 +19,7 @@ let space = CGColorSpaceCreateDeviceRGB()
 func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> CGColor {
     CGColor(colorSpace: space, components: [r, g, b, 1])!
 }
-let white = rgb(1, 1, 1)
+let white = rgb(0.82, 0.82, 0.82)
 let muted = rgb(0.73, 0.79, 0.87)
 for (state, label, components) in states {
     let ctx = CGContext(data: nil, width: 160, height: 128, bitsPerComponent: 8,
@@ -37,14 +37,19 @@ for (state, label, components) in states {
             NSAttributedString.Key(kCTForegroundColorAttributeName as String): color]
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: value, attributes: attrs))
         let width = CTLineGetTypographicBounds(line, nil, nil, nil)
+        ctx.saveGState()
+        ctx.setShouldAntialias(true)
         ctx.setShouldSmoothFonts(false)
         let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
         let baseline = centered ? (y - bounds.midY).rounded() : y
-        ctx.textPosition = CGPoint(x: right ? x - width : x, y: baseline)
+        ctx.textPosition = CGPoint(x: (right ? x - width : x).rounded(), y: baseline.rounded())
         CTLineDraw(line, ctx)
+        ctx.restoreGState()
     }
     ctx.setFillColor(rgb(0.025, 0.04, 0.075))
     ctx.fill(CGRect(x: 0, y: 0, width: 160, height: 128))
+    // CoreGraphics uses a bottom-left origin: +1 moves the entire UI up.
+    ctx.translateBy(x: 0, y: 1)
     text("CODEX", x: 8, y: 116, size: 10, color: white)
     let fresh = Date().timeIntervalSince1970 - (limits["fetched_at"] as? Double ?? 0) < 300
     text(fresh ? "LIMITS" : "OLD DATA", x: 152, y: 116, size: 9, color: fresh ? muted : rgb(1, 0.72, 0.24), right: true)
@@ -90,6 +95,13 @@ for (state, label, components) in states {
         }
         text(reset, x: 12, y: bottom + 6, size: 8, color: muted, bold: false, centered: true)
     }
+    // Preserve native pixels for the lossless RGB/Zstandard transport.
+    var rgbData = Data()
+    let pixels = ctx.data!.assumingMemoryBound(to: UInt8.self)
+    for i in stride(from: 0, to: 160 * 128 * 4, by: 4) {
+        rgbData.append(contentsOf: [pixels[i], pixels[i + 1], pixels[i + 2]])
+    }
+    try rgbData.write(to: URL(fileURLWithPath: out).appendingPathComponent(state + ".rgb"))
     let url = URL(fileURLWithPath: out).appendingPathComponent(state + ".jpg")
     let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(dest, ctx.makeImage()!, [kCGImageDestinationLossyCompressionQuality: 1.0] as CFDictionary)

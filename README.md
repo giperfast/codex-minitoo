@@ -30,7 +30,7 @@ The images below come from **the same renderer used for the device display**. Pe
 - Colors and pixel icons make each state easy to recognize.
 - The cyan bar shows the short-window balance; the purple bar shows the weekly balance. A bar turns red at **10% remaining or less**.
 - `RESET` times use your Mac's local time zone.
-- Designed for **160 × 128**: 18 px status and percentages, 8 px reset labels, and 5 px bars. JPEGs are sent at maximum quality.
+- Designed for **160 × 128**: 18 px status and percentages, 8 px reset labels, and 5 px bars. Python 3.14+ sends lossless RGB/Zstandard pixels; older versions use maximum-quality JPEG.
 
 ## Quick start
 
@@ -40,7 +40,7 @@ The images below come from **the same renderer used for the device display**. Pe
 |---|---|
 | Device | Divoom MiniToo, powered on and paired with your Mac |
 | Computer | macOS; Linux and Windows are not supported yet |
-| Python | 3.9 or newer; no third-party Python packages |
+| Python | 3.14+ for lossless output; 3.9+ for JPEG; no third-party Python packages |
 | Build tools | Xcode Command Line Tools: `swiftc` and `codesign` |
 | Codex | A local installation with logs in `~/.codex` and ChatGPT authentication |
 | Internet | Needed to read usage limits; the display uses Bluetooth |

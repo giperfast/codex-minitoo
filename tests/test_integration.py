@@ -9,6 +9,15 @@ from usage_limits import normalize
 
 
 class IntegrationTests(unittest.TestCase):
+    @unittest.skipIf(minitoo.zstd is None, 'Zstandard requires Python 3.14')
+    def test_rgb_payload_preserves_native_pixels_and_dimensions(self):
+        pixels = bytes(range(256)) * 240
+        blob = minitoo.rgb_image_blob(pixels)
+        self.assertEqual(blob[:6], bytes([0x25, 1, 3, 0xe8, 8, 10]))
+        self.assertEqual(int.from_bytes(blob[6:10], 'big'), len(blob) - 10)
+        self.assertEqual(minitoo.zstd.decompress(blob[10:]), pixels)
+        with self.assertRaises(ValueError): minitoo.rgb_image_blob(b'bad dimensions')
+
     def test_separate_senders_wait_after_previous_upload(self):
         with tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo, 'upload_screen') as upload, patch.object(minitoo.time, 'time', return_value=100), patch.object(minitoo.time, 'sleep') as sleep:
             minitoo.send_screen('working')
@@ -41,7 +50,7 @@ class IntegrationTests(unittest.TestCase):
 
     def test_upload_requires_acknowledgement_for_every_block(self):
         for complete in (True, False):
-            with self.subTest(complete=complete), tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo.time, 'sleep'):
+            with self.subTest(complete=complete), tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo, 'zstd', None), patch.object(minitoo.time, 'sleep'):
                 run = Path(temp)
                 (run / 'screens').mkdir()
                 (run / 'screens/working.jpg').write_bytes(b'x' * 600)

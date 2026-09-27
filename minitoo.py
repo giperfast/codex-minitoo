@@ -15,6 +15,10 @@ import time
 import struct
 import tempfile
 from usage_limits import read_limits, normalize
+try:
+    from compression import zstd
+except ImportError:
+    zstd = None  # Python < 3.14 retains the JPEG compatibility transport.
 
 ROOT = Path(__file__).resolve().parent
 RUN = ROOT / 'runtime'
@@ -130,6 +134,18 @@ def refresh_limits(force=False):
 def image_blob(jpeg):
     return bytes([0x23, 1, 0x03, 0xe8, 8, 10, 1]) + struct.pack('>I', len(jpeg)) + jpeg
 
+def rgb_image_blob(pixels):
+    if len(pixels) != 160 * 128 * 3:
+        raise ValueError('Ожидались RGB-пиксели 160 × 128')
+    if zstd is None:
+        raise RuntimeError('Для передачи без потерь требуется Python 3.14 или новее')
+    compressed = zstd.compress(pixels, options={
+        zstd.CompressionParameter.compression_level: 17,
+        zstd.CompressionParameter.window_log: 17,
+        zstd.CompressionParameter.content_size_flag: 1,
+    })
+    return bytes([0x25, 1, 3, 0xe8, 8, 10]) + struct.pack('>I', len(compressed)) + compressed
+
 def send_screen(state):
     # Missing image acknowledgements do not prove the RFCOMM channel closed.
     # Let the watcher retry with backoff without interrupting this connection.
@@ -198,10 +214,11 @@ def image_upload_completed(text, count):
 
 
 def upload_screen(state):
-    image = RUN / 'screens' / (state + '.jpg')
+    lossless = zstd is not None
+    image = RUN / 'screens' / (state + ('.rgb' if lossless else '.jpg'))
     if not image.exists():
         raise RuntimeError('Нет изображения состояния: выполните bash build.sh')
-    blob = image_blob(image.read_bytes())
+    blob = rgb_image_blob(image.read_bytes()) if lossless else image_blob(image.read_bytes())
     size = struct.pack('<I', len(blob))
     # The Swift helper tokenizes on spaces. Keep queued rawfiles in a private
     # directory without spaces, and retain them until consumed by the daemon.
