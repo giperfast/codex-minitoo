@@ -78,18 +78,24 @@ class IntegrationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 minitoo.fifo_write('quit', timeout=.1)
 
-    def test_upload_timeout_reopens_transport_once(self):
-        with patch.object(minitoo, 'upload_screen', side_effect=[TimeoutError('no reply'), None]) as upload, patch.object(minitoo, 'restart_transport') as restart:
-            minitoo.send_screen('working')
-            restart.assert_called_once_with()
-            self.assertEqual(upload.call_count, 2)
-
-    def test_repeated_timeout_is_reported(self):
-        with patch.object(minitoo, 'upload_screen', side_effect=TimeoutError('no reply')) as upload, patch.object(minitoo, 'restart_transport') as restart:
+    def test_image_timeout_preserves_existing_helper_for_next_attempt(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo, 'config', return_value={}), patch.object(minitoo, 'refresh_limits'), patch.object(minitoo, 'upload_screen', side_effect=[TimeoutError('no reply'), None]) as upload, patch.object(minitoo, 'start') as start, patch.object(minitoo, 'fifo_write') as write:
+            fifo = Path(temp) / 'commands.fifo'
+            import os
+            os.mkfifo(fifo)
             with self.assertRaises(TimeoutError):
-                minitoo.send_screen('working')
-            restart.assert_called_once_with()
+                minitoo.display('working')
+            self.assertTrue(fifo.exists())
+            minitoo.display('done')
             self.assertEqual(upload.call_count, 2)
+            start.assert_not_called()
+            write.assert_not_called()
+
+    def test_missing_helper_starts_before_upload(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo, 'config', return_value={}), patch.object(minitoo, 'refresh_limits'), patch.object(minitoo, 'upload_screen') as upload, patch.object(minitoo, 'start') as start:
+            minitoo.display('working')
+            start.assert_called_once_with()
+            upload.assert_called_once_with('working')
 
 
 if __name__ == '__main__':

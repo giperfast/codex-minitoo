@@ -9,6 +9,25 @@ import time
 import minitoo
 
 
+class RetryBackoff:
+    """Keep reading events while failed display updates cool down."""
+    def __init__(self):
+        self.delay = 0
+        self.next_attempt = 0
+
+    def ready(self, now):
+        return now >= self.next_attempt
+
+    def failed(self, now):
+        self.delay = min(self.delay * 2, 300) if self.delay else 30
+        self.next_attempt = now + self.delay
+        return self.delay
+
+    def succeeded(self):
+        self.delay = 0
+        self.next_attempt = 0
+
+
 class Tracker:
     def __init__(self):
         self.sessions = {}
@@ -93,6 +112,7 @@ def main():
     next_scan = 0
     sent = None
     sent_at = 0
+    retry = RetryBackoff()
     while True:
         try:
             now = time.time()
@@ -106,10 +126,17 @@ def main():
                     for record in records: tracker.consume(thread, record)
                 except FileNotFoundError: continue
             state = tracker.selected(now)
-            if state != sent or now - sent_at >= 60:
-                with open(minitoo.RUN / 'state.lock', 'a') as lock:
-                    fcntl.flock(lock, fcntl.LOCK_EX)
-                    minitoo.display(state)
+            if (state != sent or now - sent_at >= 60) and retry.ready(time.monotonic()):
+                try:
+                    with open(minitoo.RUN / 'state.lock', 'a') as lock:
+                        fcntl.flock(lock, fcntl.LOCK_EX)
+                        minitoo.display(state)
+                except Exception as error:
+                    delay = retry.failed(time.monotonic())
+                    print(time.strftime('%H:%M:%S'), type(error).__name__, str(error),
+                          f'повтор через {delay} с', flush=True)
+                    continue
+                retry.succeeded()
                 sent, sent_at = state, time.time()
                 diagnostic = {'state': state, 'updated_at': sent_at,
                               'source': 'codex_rollout', 'threads': tracker.sessions}

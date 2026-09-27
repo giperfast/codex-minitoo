@@ -129,24 +129,12 @@ def refresh_limits(force=False):
 def image_blob(jpeg):
     return bytes([0x23, 1, 0x03, 0xe8, 8, 10, 1]) + struct.pack('>I', len(jpeg)) + jpeg
 
-def restart_transport():
-    fifo_write('quit')
-    deadline = time.monotonic() + 5
-    while (RUN / 'commands.fifo').exists():
-        if time.monotonic() >= deadline:
-            raise RuntimeError('Bluetooth helper не завершился при переподключении')
-        time.sleep(.05)
-    start()
-
-
 def send_screen(state):
-    try:
-        upload_screen(state)
-    except TimeoutError:
-        # A FIFO writer can remain alive while its RFCOMM channel stops
-        # receiving replies after Bluetooth reconnects. Reopen it once.
-        restart_transport()
-        upload_screen(state)
+    # Missing image acknowledgements do not prove the RFCOMM channel closed.
+    # Let the watcher retry with backoff without interrupting this connection.
+    # The helper exits and removes its FIFO when the channel actually closes;
+    # display() will then start a new helper on the next attempt.
+    upload_screen(state)
 
 
 def upload_screen(state):

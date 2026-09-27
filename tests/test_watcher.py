@@ -5,10 +5,22 @@ import tempfile
 import unittest
 import subprocess
 import sys
-from watch_codex import Tracker, read_added
+from watch_codex import Tracker, read_added, RetryBackoff
 
 
 class WatcherTests(unittest.TestCase):
+    def test_retry_waits_caps_delay_and_resets_after_success(self):
+        retry = RetryBackoff()
+        now = 100
+        for expected in (30, 60, 120, 240, 300, 300):
+            self.assertTrue(retry.ready(now))
+            self.assertEqual(retry.failed(now), expected)
+            self.assertFalse(retry.ready(now + expected - 1))
+            now += expected
+        retry.succeeded()
+        self.assertTrue(retry.ready(now))
+        self.assertEqual(retry.failed(now), 30)
+
     def test_repeated_database_scans_do_not_exhaust_file_descriptors(self):
         code = '''
 import gc, resource, sqlite3, tempfile

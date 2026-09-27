@@ -12,9 +12,13 @@ def read_limits(timeout=12):
     codex = shutil.which('codex')
     if not codex:
         for app in ('ChatGPT', 'Codex'):
-            candidate = Path('/Applications') / (app + '.app/Contents/Resources/codex')
-            if candidate.exists():
-                codex = str(candidate)
+            resources = Path('/Applications') / (app + '.app/Contents/Resources')
+            for relative in ('codex-cli/CodexCLI.app/Contents/MacOS/codex', 'codex'):
+                candidate = resources / relative
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    codex = str(candidate)
+                    break
+            if codex:
                 break
     if not codex:
         raise RuntimeError('Codex executable not found')
