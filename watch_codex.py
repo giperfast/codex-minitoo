@@ -68,10 +68,11 @@ class Tracker:
             if previous.get('turn') and turn and previous['turn'] != turn:
                 return
             completed = kind.startswith('task_complet')
-            pending = self.questions.get(thread, {})
-            if not completed:
-                self.questions.pop(thread, None)
-            state = 'waiting' if completed and pending else 'done' if completed else 'idle'
+            # A finished turn no longer needs attention. Async question calls
+            # can remain unanswered even after the assistant finishes its work.
+            # Keeping them here makes a finished thread mask every active one.
+            self.questions.pop(thread, None)
+            state = 'done' if completed else 'idle'
             self.sessions[thread] = {'state': state,
                                      'turn': turn, 'time': stamp}
         elif kind in ('permission_request', 'approval_requested'):

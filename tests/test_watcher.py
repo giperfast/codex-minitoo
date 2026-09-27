@@ -23,15 +23,25 @@ class WatcherTests(unittest.TestCase):
         tracker.consume('a', self.item('function_call_output', 105, call_id='q'))
         self.assertEqual(tracker.selected(106), 'working')
 
-    def test_async_acceptance_and_turn_completion_do_not_answer_question(self):
+    def test_async_acceptance_waits_but_completion_clears_question(self):
         tracker = Tracker()
         tracker.consume('a', self.event('task_started', 100))
         tracker.consume('a', self.item('function_call', 101, name='functions.request_user_input_async', call_id='q'))
         tracker.consume('a', self.item('function_call_output', 102, call_id='q', output='{"accepted":true}'))
+        self.assertEqual(tracker.selected(102), 'waiting')
         tracker.consume('a', self.event('task_complete', 103))
-        self.assertEqual(tracker.selected(104), 'waiting')
+        self.assertEqual(tracker.selected(104), 'done')
+        self.assertNotIn('a', tracker.questions)
         tracker.consume('a', self.item('message', 105, role='user', content=[]))
-        self.assertEqual(tracker.selected(106), 'working')
+        self.assertEqual(tracker.selected(106), 'done')
+
+    def test_completed_question_does_not_mask_another_working_thread(self):
+        tracker = Tracker()
+        tracker.consume('a', self.event('task_started', 100))
+        tracker.consume('a', self.item('function_call', 101, name='request_user_input_async', call_id='q'))
+        tracker.consume('b', self.event('task_started', 102))
+        tracker.consume('a', self.event('task_complete', 103))
+        self.assertEqual(tracker.selected(104), 'working')
 
     def test_abort_clears_pending_question(self):
         tracker = Tracker()
