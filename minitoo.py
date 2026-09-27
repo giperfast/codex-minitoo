@@ -137,6 +137,54 @@ def send_screen(state):
     upload_screen(state)
 
 
+def received_packets(text):
+    # Only received bytes count. Replies can span callbacks or share a callback.
+    data = bytes.fromhex(' '.join(re.findall(r'delegate: rx\[\d+\]: ([0-9a-fA-F ]+)\n', text)))
+    while len(data) >= 4:
+        if data[0] != 1:
+            data = data[1:]
+            continue
+        length = int.from_bytes(data[1:3], 'little')
+        if length < 3 or length > 4096:
+            data = data[1:]
+            continue
+        total = length + 4
+        if len(data) < total:
+            break
+        packet, data = data[:total], data[total:]
+        if packet[-1] != 2 or sum(packet[1:-3]) & 0xffff != int.from_bytes(packet[-3:-1], 'little'):
+            continue
+        yield packet
+
+
+def image_acknowledgements(text):
+    announced, blocks = False, set()
+    for packet in received_packets(text):
+        length = int.from_bytes(packet[1:3], 'little')
+        if length < 7 or packet[3:6] != bytes([4, 0x8b, 0x55]):
+            continue
+        if packet[6] == 0:
+            announced = True
+        elif packet[6] == 1 and length >= 8:
+            blocks.add(int.from_bytes(packet[7:9], 'little'))
+    return announced, blocks
+
+
+def image_upload_completed(text, count):
+    # MiniToo can omit per-block ACKs and report the resulting design channel
+    # instead. Require all writes to finish before accepting that response.
+    marker = f'sendFrames: count={count} delay=40ms\n'
+    position = text.find(marker)
+    if position < 0:
+        return False
+    transfer = text[position + len(marker):]
+    done = transfer.find('sendFrames: done elapsed=')
+    if done < 0:
+        return False
+    return any(packet[3:-3] == bytes([4, 0xbd, 0x55, 0x13, 1, 5, 0])
+               for packet in received_packets(transfer[done:]))
+
+
 def upload_screen(state):
     image = RUN / 'screens' / (state + '.jpg')
     if not image.exists():
@@ -164,17 +212,25 @@ def upload_screen(state):
         offset = log.stat().st_size
     fifo_write('raw ' + (bytes([0x8b, 0]) + size).hex(' '))
     deadline = time.monotonic() + 5
+    uploading = False
+    blocks = set()
     while time.monotonic() < deadline:
         if log.exists():
             with log.open() as stream:
                 stream.seek(offset)
-                if '04 8b 55 00' in stream.read():
+                replies = stream.read()
+                announced, blocks = image_acknowledgements(replies)
+                if announced and not uploading:
                     fifo_write(f'rawfile {rawfile} 40')
-                    # Hold session lock until upload completes to avoid
-                    # interleaving another state's announce and chunks.
-                    time.sleep(len(lines) * .04 + 1)
+                    uploading = True
+                    deadline = time.monotonic() + len(lines) * .04 + 10
+                # Keep the lock until block ACKs or the final design reply.
+                if uploading and (set(range(len(lines))).issubset(blocks)
+                                  or image_upload_completed(replies, len(lines))):
                     return
         time.sleep(.05)
+    if uploading:
+        raise TimeoutError(f'MiniToo подтвердил только {len(blocks & set(range(len(lines))))}/{len(lines)} блоков изображения (0x8B)')
     raise TimeoutError('MiniToo не подтвердил начало загрузки изображения (0x8B)')
 
 def update(event, now=None):

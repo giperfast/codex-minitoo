@@ -9,6 +9,50 @@ from usage_limits import normalize
 
 
 class IntegrationTests(unittest.TestCase):
+    def test_final_design_reply_requires_completed_transfer(self):
+        reply = 'delegate: rx[13]: 01 09 00 04 bd 55 13 01 05 00 38 01 02\n'
+        start = 'sendFrames: count=95 delay=40ms\n'
+        done = 'sendFrames: done elapsed=4000ms\n'
+        self.assertTrue(minitoo.image_upload_completed(start + done + reply, 95))
+        self.assertFalse(minitoo.image_upload_completed(reply + start + done, 95))
+        self.assertFalse(minitoo.image_upload_completed(start + reply, 95))
+        self.assertFalse(minitoo.image_upload_completed(start + done + reply, 94))
+
+    def test_ack_parser_handles_split_frames_and_ignores_transmitted_bytes(self):
+        text = ('tx[0]: 01 08 00 04 8b 55 01 00 00 ed 00 02\n'
+                'delegate: rx[5]: 01 07 00 04 8b\n'
+                'delegate: rx[18]: 55 00 01 ec 00 02 01 08 00 04 8b 55 01 01 00 ee 00 02\n')
+        self.assertEqual(minitoo.image_acknowledgements(text), (True, {1}))
+        self.assertEqual(minitoo.image_acknowledgements('delegate: rx[12]: 01 08 00 04 8b 55 01 00 00 ff 00 02'), (False, set()))
+
+    def test_upload_requires_acknowledgement_for_every_block(self):
+        for complete in (True, False):
+            with self.subTest(complete=complete), tempfile.TemporaryDirectory() as temp, patch.object(minitoo, 'RUN', Path(temp)), patch.object(minitoo.time, 'sleep'):
+                run = Path(temp)
+                (run / 'screens').mkdir()
+                (run / 'screens/working.jpg').write_bytes(b'x' * 600)
+                cache = run / 'chunks'
+                cache.mkdir()
+                (run / 'screen-cache.json').write_text(json.dumps({'folder': str(cache)}))
+                log = run / 'bluetooth.log'
+                def reply(payload):
+                    body = bytes([len(payload)+2, 0]) + bytes(payload)
+                    frame = bytes([1]) + body + sum(body).to_bytes(2, 'little') + bytes([2])
+                    with log.open('a') as stream:
+                        stream.write(f'delegate: rx[{len(frame)}]: {frame.hex(" ")}\n')
+                def send(command):
+                    if command.startswith('raw '):
+                        reply([4, 0x8b, 0x55, 0, 1])
+                    else:
+                        for index in (range(3) if complete else (2,)):
+                            reply([4, 0x8b, 0x55, 1, index, 0])
+                with patch.object(minitoo, 'fifo_write', side_effect=send), patch.object(minitoo.time, 'monotonic', side_effect=range(100)):
+                    if complete:
+                        minitoo.upload_screen('working')
+                    else:
+                        with self.assertRaisesRegex(TimeoutError, '1/3'):
+                            minitoo.upload_screen('working')
+
     def test_usage_prefers_codex_bucket_and_clamps_remaining(self):
         result = normalize({'rateLimits': {'primary': {'usedPercent': 90}},
             'rateLimitsByLimitId': {'codex': {

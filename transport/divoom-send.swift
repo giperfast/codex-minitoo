@@ -651,7 +651,9 @@ func sendFrames(_ frames: [[UInt8]], on channel: IOBluetoothRFCOMMChannel, delay
             return
         }
         if delayMs > 0 {
-            Thread.sleep(forTimeInterval: Double(delayMs) / 1000.0)
+            // Writes run on the main queue. Pump its run loop during the gap
+            // so receive/close callbacks are handled between image blocks.
+            RunLoop.current.run(until: Date().addingTimeInterval(Double(delayMs) / 1000.0))
         }
     }
     let elapsedMs = Int(Date().timeIntervalSince(started) * 1000)
